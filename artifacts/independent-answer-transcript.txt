@@ -1,0 +1,81 @@
+[0;93m2026-10-09 15:24:34.658669062 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier[m
+E01 answered Northstar Labs is a fictional company. These policies are original demonstration data, not employment or legal advice. Full-time employees receive 24 working days of paid annual leave per calendar year. Part-time employees receive a pro-rated allowance based on contracted working days. Public holidays do not reduce the annual leave allowance. [S1]
+
+An employee may carry over up to 5 unused annual leave days into the next calendar year. Carried-over days expire on 31 March of that next year. People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S2] 
+
+E02 answered An employee may carry over up to 5 unused annual leave days into the next calendar year. Carried-over days expire on 31 March of that next year. People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S1] 
+
+E03 answered Submit annual leave in PeopleDesk at least 10 working days before the first day away. The line manager approves requests after checking team coverage. Requests for more than 10 consecutive working days also require approval from the department head. [S1]
+
+Northstar Labs is a fictional company. These policies are original demonstration data, not employment or legal advice. Full-time employees receive 24 working days of paid annual leave per calendar year. Part-time employees receive a pro-rated allowance based on contracted working days. Public holidays do not reduce the annual leave allowance. [S2] 
+
+E04 answered Submit annual leave in PeopleDesk at least 10 working days before the first day away. The line manager approves requests after checking team coverage. Requests for more than 10 consecutive working days also require approval from the department head. [S1] 
+
+E05 answered Book economy-class flights. Hotel reimbursement is capped at USD 180 per night before tax. Meals are reimbursed at actual cost up to USD 60 per travel day, including tax and tips. Alcohol is not reimbursable. Unused daily meal allowance cannot be carried to another day. [S1]
+
+Obtain Finance approval before incurring an expense above a stated cap. Approval of a trip does not automatically approve an above-cap hotel or meal. This policy does not authorize upgrades or personal-travel costs. [S2] 
+
+E06 answered Northstar Labs is a fictional company. Business travel requires line-manager approval before booking. Trips with an estimated total cost above USD 1,500 also require Finance approval before booking. All monetary amounts in this policy are in USD. [S2]
+
+Obtain Finance approval before incurring an expense above a stated cap. Approval of a trip does not automatically approve an above-cap hotel or meal. This policy does not authorize upgrades or personal-travel costs. [S1]
+
+Book economy-class flights. Hotel reimbursement is capped at USD 180 per night before tax. Meals are reimbursed at actual cost up to USD 60 per travel day, including tax and tips. Alcohol is not reimbursable. Unused daily meal allowance cannot be carried to another day. [S3] 
+
+E07 answered Submit the expense report in SpendDesk within 30 calendar days after the trip ends. Itemized receipts are required for any individual expense of USD 25 or more. A card statement alone is not an itemized receipt. Expenses below USD 25 still require a date, amount, business purpose, and vendor entry. [S1] 
+
+E08 answered Northstar Labs is a fictional company. Eligible employees may work remotely up to 3 days per week with line-manager agreement. Teams choose their common office days. A fully remote arrangement requires a written exception approved by People Operations and the department head. [S3] 
+
+E09 answered The home-office allowance eligibility starts after 30 calendar days of employment. Refer to NS-HR-002 for the USD 300 allowance, eligible items, and approval requirements. The onboarding buddy may help with navigation but cannot approve access or expenses. [S1]
+
+The one-time home-office equipment allowance is USD 300 per employee, available after the employee completes 30 calendar days of employment. Obtain line-manager approval before purchase and submit itemized receipts through SpendDesk. The allowance covers an external keyboard, mouse, monitor, or ergonomic desk accessories. Personal broadband subscriptions are not covered. Use the company-managed laptop for company work and follow NS-IT-001 for multi-factor authentication and remote access. Remote work from another country requires prior review by People Operations; this policy does not specify permitted countries. [S2] 
+
+E10 answered Complete security awareness training within 5 working days of starting. The manager confirms role-specific application access with each application owner. Complete the onboarding checklist in PeopleDesk by the end of the first 30 calendar days. [S1]
+
+The one-time home-office equipment allowance is USD 300 per employee, available after the employee completes 30 calendar days of employment. Obtain line-manager approval before purchase and submit itemized receipts through SpendDesk. The allowance covers an external keyboard, mouse, monitor, or ergonomic desk accessories. Personal broadband subscriptions are not covered. Use the company-managed laptop for company work and follow NS-IT-001 for multi-factor authentication and remote access. Remote work from another country requires prior review by People Operations; this policy does not specify permitted countries. [S3]
+
+Use a company-managed laptop. Connect to the company VPN before accessing internal-only systems from outside the office. Do not upload restricted company data to personal cloud storage or unapproved AI services. No passwords, API keys, or authentication tokens belong in support tickets or assistant questions. [S4]
+
+Northstar Labs is a fictional company. The hiring manager submits the starter request in ServiceDesk at least 5 working days before the start date. Include role, team, start date, required applications, and the designated onboarding buddy. IT prepares a company-managed laptop and a standard account package. [S5] 
+
+E11 answered Request application access through ServiceDesk. The line manager confirms the business need and the application owner approves the requested role. IT provisions approved access. Standard approved access requests have a target of 2 working days; this is a service target, not a guaranteed completion time. Use the minimum role needed for the task. [S1] 
+
+E12 answered Every new software vendor must pass IT Security review before purchase, even when the vendor offers a free trial. Vendors that will process personal data also require Privacy review before any personal data is shared. A manager's approval does not replace Security or Privacy review. [S1] 
+
+E13 answered Every new software vendor must pass IT Security review before purchase, even when the vendor offers a free trial. Vendors that will process personal data also require Privacy review before any personal data is shared. A manager's approval does not replace Security or Privacy review. [S2]
+
+The one-time home-office equipment allowance is USD 300 per employee, available after the employee completes 30 calendar days of employment. Obtain line-manager approval before purchase and submit itemized receipts through SpendDesk. The allowance covers an external keyboard, mouse, monitor, or ergonomic desk accessories. Personal broadband subscriptions are not covered. Use the company-managed laptop for company work and follow NS-IT-001 for multi-factor authentication and remote access. Remote work from another country requires prior review by People Operations; this policy does not specify permitted countries. [S5]
+
+Northstar Labs is a fictional company. All new software purchases require a line-manager approval recorded in ProcureDesk. Purchases of USD 500 or more also require Finance approval. The USD 500 threshold applies to the total committed contract value, including recurring charges across the initial contract term, not just the monthly installment. [S3]
+
+Procurement issues a purchase order after the required approvals and reviews are complete. Do not use a personal credit card for a software subscription. Software renewals must be submitted in ProcureDesk at least 20 working days before the renewal date. [S1] 
+
+E14 answered Workspace administrators can export workspace records as CSV from Settings > Data Export. An export contains record text, record IDs, creation timestamps, and document titles. Uploaded binary attachments are not included in the CSV export. Only organization administrators can export audit logs, and audit-log export requires the Enterprise plan. [S1] 
+
+E15 answered Include the organization name, affected function, observed impact, start time, and safe diagnostic details in the case. Do not include passwords, API keys, or authentication tokens. If a case exceeds its first-response target, request escalation in the existing support case rather than creating duplicate cases. No 24/7 coverage, guaranteed resolution time, or contractual service-credit entitlement is specified here. [S1]
+
+Northstar Labs is a fictional company. Customers open support cases in the Atlas support portal. Standard staffed support hours are 09:00–17:00 UTC, Monday through Friday, excluding company holidays. Support response targets describe the first human response, not resolution or restoration time. [S3]
+
+Severity 1 means the production service is unavailable to all users with no viable workaround. The initial response target is 1 staffed support hour. Severity 2 means a major function is unavailable to a subset of users and a workaround exists. The initial response target is 4 staffed support hours. Severity 3 means a general question or minor issue that does not prevent normal work. The initial response target is 2 working days. [S2] 
+
+E16 limited Product pricing, service availability commitments, and roadmap release dates are not published in this corpus. [S2] 
+
+E17 limited People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S1] 
+
+E18 answered Northstar Labs is a fictional company. These policies are original demonstration data, not employment or legal advice. Full-time employees receive 24 working days of paid annual leave per calendar year. Part-time employees receive a pro-rated allowance based on contracted working days. Public holidays do not reduce the annual leave allowance. [S1]
+
+Version 2.0 supersedes version 1.0, document NS-HR-001-OLD. Use this current version for current policy questions. Sick leave, parental leave, and country-specific statutory entitlements are outside the scope of this demonstration policy. [S2]
+
+An employee may carry over up to 5 unused annual leave days into the next calendar year. Carried-over days expire on 31 March of that next year. People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S3]
+
+Submit annual leave in PeopleDesk at least 10 working days before the first day away. The line manager approves requests after checking team coverage. Requests for more than 10 consecutive working days also require approval from the department head. [S4] 
+
+E19 answered An employee may carry over up to 5 unused annual leave days into the next calendar year. Carried-over days expire on 31 March of that next year. People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S3]
+
+Policy answers should identify their source documents and versions. Do not invent an employee's leave balance, unpublished pricing, telephone numbers, or exceptions. The assistant helps locate and explain evidence; it does not approve leave, grant access, or authorize purchases. [S5]
+
+Submit annual leave in PeopleDesk at least 10 working days before the first day away. The line manager approves requests after checking team coverage. Requests for more than 10 consecutive working days also require approval from the department head. [S2]
+
+Northstar Labs is a fictional company. These policies are original demonstration data, not employment or legal advice. Full-time employees receive 24 working days of paid annual leave per calendar year. Part-time employees receive a pro-rated allowance based on contracted working days. Public holidays do not reduce the annual leave allowance. [S4] 
+
+E20 limited This document intentionally does not provide a telephone number. [S1] 
+

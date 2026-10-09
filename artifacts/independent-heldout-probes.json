@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Who is Northstar Labs chief executive?",
+    "status": "answered",
+    "answer": "Northstar Labs is a fictional company. Eligible employees may work remotely up to 3 days per week with line-manager agreement. Teams choose their common office days. A fully remote arrangement requires a written exception approved by People Operations and the department head. [S1]\n\nNorthstar Labs is a fictional company. All new software purchases require a line-manager approval recorded in ProcureDesk. Purchases of USD 500 or more also require Finance approval. The USD 500 threshold applies to the total committed contract value, including recurring charges across the initial contract term, not just the monthly installment. [S2]\n\nNorthstar Labs is a fictional company. Current approved policy documents are the evidence source for the knowledge assistant. A superseded document is retained for history and must not determine a current-policy answer. When the indexed documents do not establish a fact, say that the available documents do not provide it and name the appropriate team when that team is known from evidence. [S3]\n\nNorthstar Labs is a fictional company. Multi-factor authentication is mandatory for every company account that supports it. Shared personal passwords and shared user accounts are prohibited. Use the company-managed password manager for work credentials. [S4]"
+  },
+  {
+    "question": "How many annual leave days can a contractor receive?",
+    "status": "answered",
+    "answer": "Northstar Labs is a fictional company. These policies are original demonstration data, not employment or legal advice. Full-time employees receive 24 working days of paid annual leave per calendar year. Part-time employees receive a pro-rated allowance based on contracted working days. Public holidays do not reduce the annual leave allowance. [S2]\n\nSubmit annual leave in PeopleDesk at least 10 working days before the first day away. The line manager approves requests after checking team coverage. Requests for more than 10 consecutive working days also require approval from the department head. [S1]\n\nAn employee may carry over up to 5 unused annual leave days into the next calendar year. Carried-over days expire on 31 March of that next year. People Operations maintains the authoritative leave balance in PeopleDesk; this policy does not contain individual balances. [S3]"
+  },
+  {
+    "question": "What is the cafeteria lunch menu today?",
+    "status": "unknown",
+    "answer": "I couldn't find a supported answer in the current policies. Try a more specific question or ask the relevant policy owner."
+  },
+  {
+    "question": "Do I need a VPN outside the office?",
+    "status": "answered",
+    "answer": "Use a company-managed laptop. Connect to the company VPN before accessing internal-only systems from outside the office. Do not upload restricted company data to personal cloud storage or unapproved AI services. No passwords, API keys, or authentication tokens belong in support tickets or assistant questions. [S1]"
+  }
+]
