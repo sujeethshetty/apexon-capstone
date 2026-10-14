@@ -1,4 +1,4 @@
-"""Run with: streamlit run app.py"""
+"""Run with: uv run --locked streamlit run app.py"""
 
 import os
 import time
@@ -17,37 +17,13 @@ load_dotenv()
 st.set_page_config(
     page_title="Northstar · Knowledge",
     page_icon="✦",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
-)
-st.markdown(
-    """<style>
-html,body,[class*="css"],.stApp{font-family:'DM Sans',sans-serif}
-.stApp{background:#f6f8fc;color:#142342}
-[data-testid="stSidebar"]{background:#101e38;color:#e4eafa}
-[data-testid="stSidebar"] *{color:#e4eafa}
-[data-testid="stSidebar"] [data-baseweb="select"] *{color:#142342!important}
-[data-testid="stSidebar"] [role="combobox"]{color:#142342!important;background:#ffffff!important}
-[data-testid="stSidebar"] button{background:#233656;border:1px solid #3b5073;color:#e4eafa}
-h1{font-weight:700!important;letter-spacing:-1.5px;font-size:2.8rem!important}
-h2,h3{letter-spacing:-.5px}
-.block-container{padding-top:2.4rem;max-width:1250px}
-[data-testid="stMetric"]{background:white;border:1px solid #e2e8f3;border-radius:12px;padding:15px 20px}
-[data-testid="stMetricValue"]{font-size:1.65rem}
-[data-testid="stChatInput"]{border-radius:12px}
-.stButton>button{border-radius:9px}
-.eyebrow{font-size:12px;letter-spacing:2px;font-weight:700;color:#55739d;margin-bottom:8px}
-.hero-sub{font-size:17px;color:#65758f;max-width:680px;line-height:1.65;margin-bottom:24px}
-.brand{font-size:25px;font-weight:700;letter-spacing:-.6px;margin:8px 0 4px}
-.brand-sub{font-size:12px;letter-spacing:1.5px;color:#91a6ca!important;margin-bottom:30px}
-.answer-label{font-size:12px;letter-spacing:1.4px;color:#218271;font-weight:700;margin-bottom:12px}
-.footnote{font-size:12px;color:#7686a0;margin-top:24px}
-</style>""",
-    unsafe_allow_html=True,
 )
 
 DB = os.getenv("CP01_DB_PATH", ".chroma")
 DOCS = os.getenv("CP01_DOCS_PATH", "data/policies")
+UNAVAILABLE = "Chat is temporarily unavailable. Please contact your administrator."
 
 
 @st.cache_resource
@@ -55,238 +31,161 @@ def get_store(path):
     return KnowledgeStore(path)
 
 
-with st.sidebar:
-    st.markdown(
-        '<div class="brand">✦ northstar</div><div class="brand-sub">WORKPLACE KNOWLEDGE</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption("YOUR KNOWLEDGE WORKSPACE")
-    page = st.radio(
-        "Workspace",
-        ["Ask a question", "Policy library", "How it works"],
-        label_visibility="collapsed",
-    )
-    st.divider()
-    st.caption("ANSWER ENGINE")
-    default_mode = 1 if os.getenv("CP01_MODE", "hosted") == "extractive" else 0
-    mode_label = st.selectbox("Mode", ["Hosted LLM API", "Extractive demo"], index=default_mode)
-    mode = "hosted" if mode_label == "Hosted LLM API" else "extractive"
-    ready = mode == "extractive" or bool(os.getenv("HOSTED_LLM_BASE_URL", "").strip())
-    if mode == "extractive":
-        st.caption("Deterministic source excerpts. No generation LLM is used.")
-    else:
-        st.caption(f"Model: {os.getenv('HOSTED_LLM_MODEL', 'llama3.2')}")
-        st.caption(
-            "Course-hosted open-source model. No local chat-model download. Three roles plan, select, and review evidence."
-        )
-        try:
-            config = APIConfig.from_env()
-            if config.fallback_provider == "none":
-                st.caption("Paid API fallback is disabled.")
-            else:
-                st.warning(
-                    f"Optional {config.fallback_provider} fallback is enabled. On temporary hosted failures, questions/excerpts may go to that provider and incur API charges."
-                )
-        except ValueError as exc:
-            ready = False
-            st.warning(str(exc))
-        if not os.getenv("HOSTED_LLM_BASE_URL", "").strip():
-            st.warning(
-                "Set HOSTED_LLM_BASE_URL in your local .env to the provided course URL and restart, or choose Extractive demo."
-            )
-    st.divider()
-    st.caption("LOCAL-FIRST BY DESIGN")
-    st.write("Chroma · ONNX MiniLM · LangGraph")
-    st.caption(
-        "Documents and vector search stay on this machine. Questions and retrieved excerpts go to your configured hosted model API. Use synthetic data only on plain HTTP."
-    )
-    if st.button("Reset conversation", use_container_width=True):
-        st.session_state.pop("result", None)
-        st.session_state.pop("last_question", None)
-        st.session_state.pop("answer_mode", None)
-        st.rerun()
-    st.markdown(
-        '<div class="footnote">CP01 CAPSTONE<br>Fictional policies · Demo use only</div>',
-        unsafe_allow_html=True,
-    )
+def reset_conversation():
+    for key in ("result", "last_question", "answer_mode", "conversation"):
+        st.session_state.pop(key, None)
 
+
+config, config_error = None, ""
+try:
+    config = APIConfig.from_env()
+except ValueError as exc:
+    config_error = str(exc)
+hosted_ready = config is not None and bool(config.base_url)
+store, documents, store_error = None, [], ""
 try:
     store = get_store(DB)
     documents = load_documents(DOCS)
 except Exception as exc:
-    st.error(
-        f"Workspace could not initialize: {type(exc).__name__}. Check document metadata and dependencies."
-    )
-    st.stop()
+    store_error = f"Policy library could not initialize ({type(exc).__name__})."
+library_ready = store is not None and not store_error and store.collection.count() > 0
 
-if store.collection.count() == 0:
-    st.info(
-        "Welcome. Build the local index once to search the synthetic policy library. The first run downloads the free ONNX MiniLM embedding model (about 80 MB)."
-    )
-    if st.button("Build knowledge index", type="primary"):
-        try:
-            with st.spinner("Embedding policies locally…"):
-                summary = store.ingest(DOCS)
-            st.success(f"Indexed {summary['documents']} documents and {summary['chunks']} chunks.")
-            st.rerun()
-        except Exception as exc:
-            st.error(
-                f"Index build failed ({type(exc).__name__}). Check network access for the first model download, then retry."
-            )
-    st.stop()
-
-if store.needs_refresh(DOCS):
-    try:
-        with st.spinner("Policy files changed. Refreshing the current index…"):
-            store.ingest(DOCS)
-    except Exception as exc:
-        st.error(
-            f"Policy refresh failed ({type(exc).__name__}). Search is paused to avoid using stale evidence."
+with st.sidebar:
+    st.markdown("### northstar")
+    st.caption("Workplace knowledge")
+    st.button("New chat", use_container_width=True, on_click=reset_conversation)
+    page = st.radio("Workspace", ["Chat", "Policy library"], label_visibility="collapsed")
+    st.divider()
+    with st.expander("Settings"):
+        st.caption("Administrator setup")
+        st.write("Model configured" if hosted_ready else "Model connection needed")
+        st.caption(
+            "Configure HOSTED_LLM_BASE_URL and HOSTED_LLM_MODEL in the server's private .env, "
+            "then restart the app. The endpoint must support Ollama's /api/chat contract."
         )
-        st.stop()
-
-current = [doc for doc in documents if doc.status == "current"]
-
-if page == "Ask a question":
-    st.markdown(
-        '<div class="eyebrow">CLEAR ANSWERS. TRACEABLE EVIDENCE.</div>', unsafe_allow_html=True
-    )
-    st.title("Your workplace, answered.")
-    st.markdown(
-        '<div class="hero-sub">Find the policy behind the question. Three specialist agents retrieve, select, and verify answers against current company knowledge.</div>',
-        unsafe_allow_html=True,
-    )
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Current policies", len(current))
-    m2.metric("Knowledge sources", len(documents))
-    m3.metric("Verification", "Evidence-first")
-    st.write("")
-    st.caption("EXPLORE A QUESTION")
-    examples = [
-        "How many days of annual leave do employees receive?",
-        "What is the home office equipment allowance?",
-        "What is the price of the Enterprise Plus plan?",
-    ]
-    cols = st.columns(3)
-    selected = None
-    for col, question in zip(cols, examples, strict=True):
-        if col.button(question, use_container_width=True, disabled=not ready):
-            selected = question
-    question = st.chat_input(
-        "Ask about leave, expenses, access, security…", max_chars=1000, disabled=not ready
-    )
-    question = selected or question
-    if not ready:
-        st.info(
-            "Resolve the model setup notice in the sidebar, or select Extractive demo to explore without a model server."
-        )
-    if question:
-        st.session_state.last_question = question
-        started = time.monotonic()
-        final_state = {"question": question, "trace": []}
-        with st.status("Working through the evidence…", expanded=True) as progress:
+        if config_error:
+            st.caption(config_error)
+        if store_error:
+            st.caption(store_error)
+        st.caption("Policy library ready" if library_ready else "Policy library needs preparation")
+        st.caption("Initial preparation downloads a free search model (about 80 MB).")
+        if st.button("Refresh policy library", disabled=store is None or bool(store_error)):
             try:
-                graph = build_graph(store, make_provider(mode))
-                for update in graph.stream(final_state, stream_mode="updates"):
-                    for _, values in update.items():
-                        final_state.update(values)
-                        if values.get("trace"):
-                            latest = values["trace"][-1]
-                            st.write(f"{latest['agent']} · {latest['detail']}")
-                progress.update(label="Evidence check complete", state="complete", expanded=False)
+                with st.spinner("Preparing policies…"):
+                    store.ingest(DOCS)
+                st.rerun()
             except Exception as exc:
-                final_state.update(
-                    status="error",
-                    answer=f"Application error ({type(exc).__name__}). Please retry.",
-                    claims=[],
+                st.error(
+                    f"Policy preparation failed ({type(exc).__name__}). Check the model download and retry."
                 )
-                progress.update(label="Unable to complete this question", state="error")
-        final_state["elapsed"] = round(time.monotonic() - started, 2)
-        st.session_state.result = final_state
-        st.session_state.answer_mode = mode
-    if "result" in st.session_state:
-        result = st.session_state.result
-        st.divider()
-        st.caption("YOUR QUESTION")
-        st.subheader(st.session_state.last_question)
-        left, right = st.columns([1.55, 1], gap="large")
-        with left:
-            with st.container(border=True):
-                if result["status"] in {"answered", "limited"}:
-                    st.markdown(
-                        '<div class="answer-label">● RETRIEVED EXCERPTS</div>',
-                        unsafe_allow_html=True,
-                    )
-                    if result["status"] == "limited":
-                        st.info(
-                            "The current documents do not provide the requested fact. Here is the relevant limitation."
-                        )
-                    # Render corpus/model text as plain text, never as HTML or active links.
-                    for claim in result.get("claims", []):
-                        st.text(f"{claim.text} [{claim.citation_id}]")
-                    st.caption(
-                        "These excerpts match current sources. Demo selection is heuristic: relevance, applicability and completeness are not guaranteed. Review the full policy before acting."
-                    )
-                else:
-                    st.info(result.get("answer", "No answer available."))
-                actual_mode = st.session_state.answer_mode
-                st.caption(
-                    (
-                        "Extractive demo · not LLM-generated"
-                        if actual_mode == "extractive"
-                        else result.get("provider_used", "Hosted LLM API")
-                        + " · selected source excerpts"
-                    )
-                    + f" · {result['elapsed']}s"
-                )
-            with st.expander("Agent activity", expanded=True):
-                for i, event in enumerate(result.get("trace", []), 1):
-                    st.write(f"{i:02d}  {event['agent']}")
-                    st.caption(
-                        f"{event['detail']} · {event['duration_ms']} ms · {event.get('provider', '')}"
-                    )
-                if result.get("provider_events"):
-                    st.caption("API retry / fallback activity")
-                    for api_event in result["provider_events"]:
-                        st.write(f"{api_event['provider']} · {api_event['outcome']}")
-        with right:
-            st.markdown("### Evidence desk")
-            cited = {c.citation_id for c in result.get("claims", [])}
-            for evidence in result.get("evidence", []):
-                meta = evidence.metadata
-                with st.expander(
-                    f"[{evidence.citation_id}] {meta['title']}",
-                    expanded=evidence.citation_id in cited,
-                ):
-                    st.caption(
-                        f"{meta['document_id']} · v{meta['version']} · {meta['effective_date']} · CURRENT"
-                    )
-                    st.text(evidence.text)
-                    st.caption(
-                        f"Section: {meta['section']} · Cosine similarity: {evidence.score:.3f} (not confidence)"
-                    )
-            if not result.get("evidence"):
-                st.caption("No current evidence passed the relevance gate.")
-        with st.expander("Retrieval transparency & JSON trace"):
-            st.caption(
-                "Up to 8 chunks/query (12 merged); cosine threshold 0.28 + lexical anchor. Scores are heuristics, not calibrated confidence. Documents never grant tool permissions."
-            )
-            st.json(
-                {
-                    **result,
-                    "evidence": [asdict(e) for e in result.get("evidence", [])],
-                    "claims": [asdict(c) for c in result.get("claims", [])],
-                }
-            )
-    else:
-        st.info(
-            "Start with a sample question or ask your own. Every answer links back to an exact policy excerpt."
+        st.caption("Advanced / developer options")
+        default_mode = 1 if os.getenv("CP01_MODE", "hosted") == "extractive" else 0
+        mode_label = st.selectbox(
+            "Answer mode",
+            ["Hosted LLM API", "Extractive demo"],
+            index=default_mode,
+            key="mode_choice",
+            on_change=reset_conversation,
         )
+        st.caption(
+            "Extractive mode is a developer tool. It copies policy text and does not generate AI answers."
+        )
+        show_diagnostics = st.checkbox("Show technical details", value=False)
+        technical_overview = st.checkbox("Show architecture", value=False)
+        if config:
+            st.text(f"Model: {config.model}")
+            st.caption(f"Paid fallback: {config.fallback_provider}")
+        st.caption(
+            "Hosted mode sends questions and policy excerpts to your configured model server. "
+            "Use synthetic data only with a plain HTTP server. Paid fallback is separately opt-in "
+            "through private configuration and may incur charges."
+        )
+    st.caption("Sample policies · Northstar Labs")
+
+mode = "hosted" if mode_label == "Hosted LLM API" else "extractive"
+ready = library_ready and (mode == "extractive" or hosted_ready)
+if technical_overview:
+    page = "How it works"
+
+if page == "Chat":
+    st.title("How can I help?")
+    st.caption("Ask about your workplace policies.")
+    if not ready and not st.session_state.get("conversation"):
+        st.caption(UNAVAILABLE)
+    if mode == "hosted" and hosted_ready and config.fallback_provider != "none":
+        st.warning(
+            f"Paid {config.fallback_provider} fallback is enabled. "
+            "Questions and excerpts may be sent to that provider and incur API charges."
+        )
+    question = st.chat_input("Message Northstar", max_chars=1000)
+    if question:
+        started = time.monotonic()
+        if not ready:
+            result = {"status": "unavailable", "answer": UNAVAILABLE, "claims": [], "evidence": []}
+        else:
+            with st.spinner("Thinking…"):
+                try:
+                    if store.needs_refresh(DOCS):
+                        store.ingest(DOCS)
+                    result = build_graph(store, make_provider(mode)).invoke(
+                        {"question": question, "trace": []}
+                    )
+                except Exception as exc:
+                    result = {
+                        "status": "error",
+                        "answer": "I couldn't complete that request. Please try again or contact your administrator.",
+                        "error": type(exc).__name__,
+                        "claims": [],
+                        "evidence": [],
+                    }
+        result["elapsed"] = round(time.monotonic() - started, 2)
+        st.session_state.result = result
+        st.session_state.last_question = question
+        st.session_state.answer_mode = mode
+        st.session_state.setdefault("conversation", []).append(
+            {"question": question, "result": result, "mode": mode}
+        )
+        st.rerun()
+
+    for turn in st.session_state.get("conversation", []):
+        result = turn["result"]
+        with st.chat_message("user"):
+            st.text(turn["question"])
+        with st.chat_message("assistant"):
+            if result["status"] == "error":
+                st.text(
+                    "I couldn't complete that request. Please try again or contact your administrator."
+                )
+            else:
+                # Plain text keeps source/model content from creating HTML or active links.
+                st.text(result.get("answer", "I couldn't find an answer in the current policies."))
+            if turn["mode"] == "extractive" and result.get("claims"):
+                st.caption("Policy extract · not AI-generated")
+            cited = {claim.citation_id for claim in result.get("claims", [])}
+            if cited:
+                with st.expander("Sources"):
+                    for evidence in result.get("evidence", []):
+                        if evidence.citation_id not in cited:
+                            continue
+                        meta = evidence.metadata
+                        st.caption(
+                            f"[{evidence.citation_id}] {meta.get('title', 'Policy')} · v{meta.get('version', '')}"
+                        )
+                        st.text(evidence.text)
+                    st.caption(
+                        "Check the full policy for applicability. Source checks and model review can miss errors."
+                    )
+            if show_diagnostics:
+                with st.expander("Technical details"):
+                    st.json(
+                        {
+                            **result,
+                            "evidence": [asdict(e) for e in result.get("evidence", [])],
+                            "claims": [asdict(c) for c in result.get("claims", [])],
+                        }
+                    )
 
 elif page == "Policy library":
-    st.markdown(
-        '<div class="eyebrow">A SMALL, AUDITABLE SOURCE OF TRUTH</div>', unsafe_allow_html=True
-    )
     st.title("The policy library")
     st.caption(
         "Original synthetic Northstar Labs documents. Superseded policies remain visible for audit, but are excluded from retrieval."
@@ -312,9 +211,6 @@ elif page == "Policy library":
                 f"Index refresh failed ({type(exc).__name__}). Existing files have not been changed."
             )
 else:
-    st.markdown(
-        '<div class="eyebrow">BOUNDED AGENTS, INSPECTABLE DECISIONS</div>', unsafe_allow_html=True
-    )
     st.title("How the answer earns trust")
     for title, description in [
         (
@@ -323,11 +219,11 @@ else:
         ),
         (
             "02 · Answer agent",
-            "Selects relevant source excerpts using the configured hosted open-source model, or a clearly labeled deterministic extractive demo. Source text is untrusted data.",
+            "Generates a concise natural-language answer with citations and exact supporting quotes using the configured hosted model. Extractive developer mode copies policy sections and is not AI generation. Source text is untrusted data.",
         ),
         (
             "03 · Verification agent",
-            "Checks citation IDs, current versions, exact quote support and lexical relevance. In LLM mode an independent reviewer also checks relevance and completeness. Any unsupported claim rejects the entire draft.",
+            "Checks citations, current versions, exact supporting quotes, lexical relevance, and numeric support. An independent reviewer checks the generated answer against its quotes and full source context, including material qualifications. Failed checks reject the entire draft; model review is not a guarantee of factual accuracy.",
         ),
         (
             "04 · Conditional safe response",

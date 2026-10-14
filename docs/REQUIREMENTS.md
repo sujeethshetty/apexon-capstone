@@ -12,7 +12,7 @@ The available project brief identifies CP01 and Python, LangChain/LangGraph, a v
 - Streamlit is the demonstration interface, with a CLI for repeatable checks.
 - Markdown documents with validated metadata are the supported ingestion format. PDF/OCR is not claimed.
 - The supplied open-source model is accessed through its course-hosted, Ollama-compatible API; local chat-model installation is optional. The bundled extractive mode is a transparent, deterministic demonstration baseline, **not an LLM**.
-- Three bounded roles retrieve evidence, select source-backed answer excerpts, and validate citations. Hosted LLM API mode uses three separate planner/selector/reviewer prompts against the configured model, with a non-overridable deterministic provenance check. Extractive mode uses deterministic stand-ins and is not LLM inference.
+- Three bounded roles retrieve evidence, generate a concise cited answer with exact supporting quotes, and verify the draft. Hosted mode uses planner/generator/reviewer prompts, deterministic quote/citation/numeric checks, and independent semantic review. Model review is not a correctness guarantee. Extractive mode uses deterministic stand-ins and is not LLM inference.
 - Search retrieves up to eight chunks per query, with a twelve-chunk merged cap; the extractive baseline returns up to four source sections. Missing-attribute evidence is marked `limited`.
 - Content-and-metadata fingerprints trigger index refresh; numeric questions return policy rules rather than computed or authorized decisions.
 
@@ -28,7 +28,7 @@ The available project brief identifies CP01 and Python, LangChain/LangGraph, a v
 | R07 | Safe unsupported answer handling | Test unrelated question, missing pricing, balance, and hotline number |
 | R08 | Source text treated as untrusted | Test deliberate malicious quotation in NS-KB-001; do not follow it |
 | R09 | Hosted open-source model integration | Configure the supplied API privately; record a successful live request before claiming live LLM mode is verified |
-| R10 | Usable demonstration | Run Streamlit, show an answer, source card, workflow trace, and safe missing-information response |
+| R10 | Usable demonstration | Run Streamlit, show a concise generated answer, expandable sources, optional technical trace, and safe missing-information response |
 | R11 | Evaluation and limitations | Twenty known-answer cases, reproducible tests, honest outcome reporting |
 | R12 | Reproducible handoff | README setup and commands, environment example, dependencies, and docs |
 | R13 | Bounded transient retries | Test exponential jitter, capped Retry-After, per-attempt deadlines, and shared question budget |

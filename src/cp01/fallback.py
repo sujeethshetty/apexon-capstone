@@ -53,6 +53,7 @@ class PaidAPIProvider(RoleProvider):
                 schema = {
                     "type": "object",
                     "properties": {
+                        "answer": {"type": "string", "maxLength": 1200},
                         "claims": {
                             "type": "array",
                             "maxItems": 3,
@@ -64,9 +65,9 @@ class PaidAPIProvider(RoleProvider):
                                 "required": ["text", "citation_id", "quote"],
                                 "additionalProperties": False,
                             },
-                        }
+                        },
                     },
-                    "required": ["claims"],
+                    "required": ["answer", "claims"],
                 }
             elif "excerpts" in data:
                 schema = {

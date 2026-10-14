@@ -78,7 +78,12 @@ def test_full_graph_fallback_uses_shared_budget_and_reports_actual_provider():
         [response(503)] * 3
         + [
             openai({"queries": ["annual leave"]}),
-            openai({"claims": [{"text": quote, "quote": quote, "citation_id": "S1"}]}),
+            openai(
+                {
+                    "answer": "Employees get 24 working days of annual leave. [S1]",
+                    "claims": [{"text": quote, "quote": quote, "citation_id": "S1"}],
+                }
+            ),
             openai({"approved": True}),
         ]
     )
@@ -169,7 +174,12 @@ def test_reused_graph_resets_budget_events_and_primary_after_idle():
 
     outcomes = [
         hosted({"queries": ["annual leave"]}),
-        hosted({"claims": [{"text": quote, "quote": quote, "citation_id": "S1"}]}),
+        hosted(
+            {
+                "answer": "Employees get 24 working days of annual leave. [S1]",
+                "claims": [{"text": quote, "quote": quote, "citation_id": "S1"}],
+            }
+        ),
         hosted({"approved": True}),
     ] * 2
     now = [0.0]
@@ -188,3 +198,34 @@ def test_reused_graph_resets_budget_events_and_primary_after_idle():
     assert first["status"] == second["status"] == "answered"
     assert p.active is p.primary and sender.call_count == 6
     assert t.budget.attempts == 3 and len(second["provider_events"]) == 3
+
+
+def test_claude_generated_answer_contract_includes_support_and_bounded_text():
+    quote = "Employees receive 24 working days of annual leave."
+    generated = "Employees get 24 days of annual leave. [S1]"
+    t, sender, _ = transport(
+        [
+            response(
+                body={
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "submit_result",
+                            "input": {
+                                "answer": generated,
+                                "claims": [{"text": quote, "quote": quote, "citation_id": "S1"}],
+                            },
+                        }
+                    ]
+                }
+            )
+        ]
+    )
+    provider = PaidAPIProvider("anthropic", "fake-key", "fake-model", t)
+    draft = provider.answer(
+        "annual leave", [Evidence("S1", "chunk", quote, {"status": "current"}, 0.9)]
+    )
+    assert draft.answer == generated and draft.claims[0].quote == quote
+    schema = sender.call_args.args[2]["tools"][0]["input_schema"]
+    assert schema["required"] == ["answer", "claims"]
+    assert schema["properties"]["answer"]["maxLength"] == 1200

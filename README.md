@@ -12,7 +12,7 @@ No paid API or hosted vector database is required. The course-hosted open-source
 - [Captioned walkthrough from real app screenshots (MP4)](docs/assets/CP01_Demo_Walkthrough.mp4)
 - [Home-screen screenshot](docs/assets/01_home.jpg)
 
-The recorded demonstration uses **extractive demo mode**. It does not show a live hosted-model generation run.
+The recorded demonstration shows an earlier UI in **extractive developer mode**. It does not show the current employee chat or a live hosted-model generation run.
 
 ## Quick start
 
@@ -25,7 +25,9 @@ uv run --locked cp01 ingest
 uv run --locked streamlit run app.py
 ```
 
-Before asking live questions, paste the course-provided model base URL into `HOSTED_LLM_BASE_URL` in your private `.env`. No local Ollama installation or chat-model download is required. Alternatively choose **Extractive demo** in the sidebar to explore immediately. Open the localhost address printed by Streamlit, normally http://localhost:8501. The first ingestion downloads Chroma's official ONNX MiniLM model (~80 MB) into `.chroma/embedding-model/`. Chroma's model downloader validates the model archive checksum. The local database and model cache are excluded from Git. Document embeddings persist in Chroma and the ONNX model is cached; each new search query is embedded locally at query time.
+Before using the employee chat, configure the course model URL in `HOSTED_LLM_BASE_URL` and its model name in `HOSTED_LLM_MODEL` in the server's private `.env`, then restart the app. No local chat-model installation is required. The employee view is a simple conversation with concise LLM-generated answers and a collapsed **Sources** section. Model/index setup and developer options are under **Settings**. An unconfigured service still accepts text, but responds with one clear unavailable message and makes no model call. It never silently substitutes an extractive response.
+
+Open the localhost address printed by Streamlit, normally http://localhost:8501. The first ingestion downloads Chroma's official ONNX MiniLM search model (~80 MB) into `.chroma/embedding-model/`; the downloader validates its checksum. The database and model cache are excluded from Git. Administrators can also prepare or refresh the index from Settings. Chat history lives only in the current browser session; **New chat** or changing answer mode clears it. Native Streamlit controls follow light and dark themes so text and placeholders stay readable.
 
 No environment activation or separate editable install is needed. `uv sync --locked` installs the project and the default development group (pytest and Ruff) from the committed `uv.lock`, and fails if the lock needs updating. Use `uv run --locked python --version` to check the project interpreter.
 
@@ -42,10 +44,10 @@ To upgrade all dependencies within the declared ranges, use `uv lock --upgrade` 
 
 | Mode | What runs | What is returned |
 |---|---|---|
-| **Extractive demo** | Actual Chroma/ONNX retrieval + deterministic role stand-ins inside LangGraph | Relevant short policy sections, copied exactly; **not LLM-generated** |
-| **Hosted LLM API** (default) | Three role-scoped model calls: retrieval planner, evidence selector, independent reviewer | LLM-selected verbatim policy excerpts, published only after deterministic provenance checks and reviewer approval |
+| **Extractive developer mode** (Settings only) | Actual Chroma/ONNX retrieval + deterministic stand-ins inside LangGraph | Relevant policy extracts with adjacent qualifications; **not AI-generated** |
+| **Hosted LLM API** (default) | Three model calls: retrieval planner, answer generator, independent reviewer | A concise natural-language answer with citations, exact supporting quotes, and reviewer approval |
 
-This is **quote-grounded RAG**, not free-form generative synthesis. Keeping output verbatim makes the provenance checks reproducible. The assistant does not calculate entitlements, approve purchases, or make employment decisions. Complex questions can require reading several policy sections; selected excerpts may be incomplete even when citations are valid.
+Hosted mode now performs grounded answer generation. The answer agent writes a direct response, usually 1–3 short sentences, with a hard maximum of 160 words / 1,200 characters; it also returns exact supporting excerpts. The verifier checks current sources, exact quote provenance, citation IDs, and numeric support before asking a separate review role to check the answer against the quotes and full retrieved context, including material conditions and exceptions. A failed check or reviewer rejection publishes an abstention instead of the draft. These controls reduce errors but do not guarantee that every generated statement is correct or complete. The assistant does not calculate personal entitlements or authorize decisions.
 
 ### Configure the course-hosted open-source API
 
@@ -63,11 +65,11 @@ Replace the example hostname with the course-provided URL. Choose **Hosted LLM A
 uv run --locked cp01 ask "How many annual leave days do full-time employees get?" --mode hosted
 ```
 
-The application calls the model's `/api/chat` endpoint for three bounded role-specific requests. The question and selected excerpts are sent to your configured model server. If the course endpoint is plain HTTP, traffic is not encrypted: use the included synthetic data only. The course address is deliberately not committed, and no paid-provider key is needed. Local Chroma, Python dependencies, and the small ONNX embedding model still use local disk even though the chat model is hosted.
+The application calls the model's `/api/chat` endpoint for three bounded role-specific requests. The question, retrieved context, draft answer, and supporting excerpts are sent to your configured model server. If the course endpoint is plain HTTP, traffic is not encrypted: use the included synthetic data only. The course address is deliberately not committed, and no paid-provider key is needed. Local Chroma, Python dependencies, and the small ONNX embedding model still use local disk even though the chat model is hosted.
 
-**Verification status:** real ONNX embeddings, Chroma persistence, LangGraph execution, and Streamlit interactions were exercised. Hosted-model request/response contracts and failure paths are tested with mocks. A bounded synthetic live smoke attempt and its authorized retry were stopped by execution-tool infrastructure errors before any provider response was available. This does **not** establish that the course server is offline. Live-model quality remains unverified, and there is no silent switch to extractive mode on API failure. Optional paid fallback is separately opt-in and shown in the UI.
+**Verification status:** real ONNX embeddings, Chroma persistence, LangGraph execution, and Streamlit interactions were exercised. The question-submit → retrieval → generation → review → rendered-answer path is covered by offline tests using deterministic test embeddings and mocked LLM responses. On 2026-10-14, authorized live model-discovery and tiny synthetic chat checks received no server response; the chat request hit its 5-second connection timeout. This establishes a connection failure from that execution environment, not its cause or that the server is universally offline. Live-model compatibility and answer quality remain unverified. There is no silent switch to extractive mode on API failure. Optional paid fallback is separately opt-in and shown in the UI.
 
-For a completely API-free demonstration:
+For developer-only, API-free checks, choose **Extractive demo** under Settings or run:
 
 ```bash
 uv run --locked cp01 ask "How many annual leave days do full-time employees get?" --mode extractive
@@ -85,7 +87,7 @@ OPENAI_MODEL=gpt-4.1-mini
 
 Fill the blank key locally. For Claude instead, set `FALLBACK_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL=claude-haiku-4-5-20251001`. Model names are configurable and account availability must be checked with the provider. The OpenAI model must support Chat Completions, JSON-object response format, `temperature=0`, and `max_completion_tokens`; this is not an arbitrary-model adapter. The Claude model must support Messages with forced tool output and `temperature=0`. `.env` and `.env.*` are ignored by Git, with `.env.example` explicitly allowed. Never paste keys into chat, screenshots, or committed files. Keys are excluded from configuration representations and never included in graph state or UI traces.
 
-**Data sharing and charges:** enabling a fallback authorizes the app to send the question and retrieved policy excerpts for the failed/current and remaining roles to the selected provider's official HTTPS API. This may incur that provider's API charges. Use synthetic data for this capstone. The UI warns when fallback is enabled and shows the provider actually used. There is no fallback if `FALLBACK_PROVIDER=none`, and missing selected-provider credentials fail configuration before requests. Extractive demo uses neither hosted generation nor paid fallback.
+**Data sharing and charges:** enabling a fallback authorizes the app to send the question and retrieved policy excerpts for the failed/current and remaining roles to the selected provider's official HTTPS API. This may incur that provider's API charges. Use synthetic data for this capstone. The UI warns when fallback is enabled; actual provider use is available in the optional technical details. There is no fallback if `FALLBACK_PROVIDER=none`, and missing selected-provider credentials fail configuration before requests. Extractive demo uses neither hosted generation nor paid fallback.
 
 ### Bounded retries and failure rules
 
@@ -111,16 +113,16 @@ Only if you prefer running the chat model yourself, install [Ollama](https://oll
 - “What is the price of Atlas Enterprise?” → documents explicitly do not publish pricing; no invented price
 - “What is the Security hotline telephone number?” → missing-number limitation, no invented contact
 
-The sidebar also opens the **Policy library** (including an optional superseded-policy view) and **How it works**. Reset clears this browser session's answer. Chat answers are not stored in Chroma.
+The sidebar opens the **Policy library**, including an optional superseded-policy view. Sources are collapsed under each answer. Technical traces and the architecture view are available only through advanced Settings. Chat answers are not stored in Chroma.
 
 ## Architecture and controls
 
 1. **Retrieval agent:** validates 1–1,000-character input. In LLM mode, a planner chooses up to three bounded queries; the deterministic demo uses the original query. Search returns up to eight chunks/query, filters `status=current`, merges at most 12, and applies a heuristic cosine threshold plus lexical anchor.
-2. **Answer agent:** chooses evidence excerpts using the selected provider. The demo preserves adjacent conditions by returning bounded sections instead of isolated sentences. Explicit missing-attribute statements take a `limited` response route.
-3. **Verification agent:** rejects unknown source IDs, superseded sources, non-verbatim text, empty/short quotes, and missing lexical relevance. LLM mode additionally asks an independent review role to assess relevance/completeness. The reviewer cannot override deterministic rejection.
-4. **Conditional routing:** invalid input, missing evidence, provider/reviewer errors, and unsupported drafts route to a safe response. Successful verified excerpts and explicit known limitations are distinguishable states.
+2. **Answer agent:** generates a concise, cited answer and up to three exact supporting excerpts. Extractive developer mode keeps relevant whole sections to preserve adjacent conditions and avoids repeating sections that cover the same question terms. Explicit missing-attribute statements take a `limited` route.
+3. **Verification agent:** rejects unknown citations, superseded sources, altered/empty/short supporting quotes, missing lexical relevance, and unsupported numeric tokens in generated answers. An independent model review checks every generated claim and material qualifications against the supporting quotes and full retrieved context. The reviewer cannot override deterministic rejection.
+4. **Conditional routing:** invalid input, missing evidence, provider/reviewer errors, and unsupported drafts route to a safe response. Accepted answers and explicit known limitations are distinguishable states. Rejected generated drafts are cleared from the final state.
 
-The roles share typed `AssistantState`, but have different responsibilities and bounded outputs. Model calls use JSON schemas validated in Python, temperature zero, finite deadlines, and no tools capable of external actions. Three logical role calls share a maximum of eight HTTP attempts; transient retries and optional fallback consume the same budget. The UI shows actual graph events and elapsed times, not a fabricated animation.
+The roles share typed `AssistantState`, but have different responsibilities and bounded outputs. Model calls use JSON schemas validated in Python, temperature zero, finite deadlines, and no tools capable of external actions. Three logical role calls share a maximum of eight HTTP attempts; transient retries and optional fallback consume the same budget. The employee UI shows only a brief thinking indicator. Actual graph events, elapsed times, and provider details remain available through advanced Settings.
 
 The corpus loader accepts only local UTF-8 Markdown with validated YAML front matter: `document_id`, `title`, `version`, `effective_date`, `status` (`current`/`superseded`), and `category`. Limits: 200 files, 256 KB/file, no symlinks. Optional `excluded_sections` explicitly quarantines reviewed non-authoritative examples. An included malicious security-test quotation is visible in the library but excluded from indexing by this metadata.
 
@@ -138,7 +140,7 @@ uv pip check
 
 GitHub Actions uses uv 0.11.14 and `uv sync --locked` on Linux with Python 3.11, 3.12, and 3.13, plus macOS and Windows with Python 3.12. Each job fetches the locked distributions without a restored dependency cache, so unavailable pins fail installation. The workflow does not download an embedding model or call a live hosted LLM. `uv pip check` checks installed dependency consistency without requiring pip in the environment.
 
-The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. The Streamlit smoke test opens the unindexed app with external network connections blocked and private `.env` loading disabled; loopback connections are allowed for Windows event-loop initialization.
+The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. Streamlit AppTest checks composing while unavailable, explicit developer-mode transitions, question submission, session history, short generated answers, collapsed sources, setup errors, and paid-fallback notices. External connections and private `.env` loading are disabled; loopback is allowed for Windows event-loop initialization. Hosted-generation tests use mocks, not a live endpoint.
 
 For the separate evaluation using the **real** local ONNX embedding model against the 20 synthetic cases, run:
 
@@ -176,7 +178,7 @@ docs/                      Architecture, requirements, demo and evaluation
 
 The supplied capstone overview names CP01 but does not include the separate detailed acceptance requirements. This implementation documents its assumptions; confirm those requirements before assessment.
 
-This is a single-user local capstone prototype. It has no authentication, document-level access control, production tenancy, audit-log retention policy, or transactional index rebuild. Do not expose it publicly or add real confidential data without hardening. Model output and source text are untrusted. An exact quotation proves provenance, not authority, relevance, or completeness; malicious material in an **unreviewed, non-quarantined** document can still be repeated. Curated exclusion metadata is not a general injection detector. Numeric scenarios return the policy thresholds, not a computed or authorized decision. Held-out questions about an unknown CEO or contractor entitlement sometimes retrieve employee-policy excerpts instead of abstaining; the heuristic `answered` status means evidence was returned, not that every part of a question was resolved. The UI labels this explicitly as retrieved excerpts and warns about relevance, applicability, and completeness.
+This is a single-user local capstone prototype. It has no authentication, document-level access control, production tenancy, audit-log retention policy, or transactional index rebuild. Do not expose it publicly or add real confidential data without hardening. Model output and source text are untrusted. An exact quotation proves provenance, not authority, relevance, or completeness; malicious material in an **unreviewed, non-quarantined** document can still be repeated. Curated exclusion metadata is not a general injection detector. Numeric scenarios return the policy thresholds, not a computed or authorized decision. Held-out questions about an unknown CEO or contractor entitlement sometimes retrieve employee-policy excerpts instead of abstaining; the heuristic `answered` status means evidence was returned, not that every part of a question was resolved. Extractive output is labeled as a policy extract, not AI-generated. Hosted generation and independent review may still miss unsupported claims or important qualifications. The source panel preserves full context for checking applicability.
 
 No uploads are exposed in the UI. Add reviewed synthetic Markdown through the local corpus and refresh. The current-only filter relies on curated `status` metadata rather than automatic policy conflict resolution or effective-date scheduling. One approved current version per document ID is enforced.
 
@@ -184,7 +186,7 @@ No uploads are exposed in the UI. Add reviewed synthetic Markdown through the lo
 
 - **First embedding download fails:** allow the official model host used by Chroma, retry ingestion, and check proxy support. `httpx[socks]` is included for SOCKS proxies.
 - **No useful answer:** use a precise policy question; inspect retrieved excerpts and score thresholds. A cosine score is not a confidence probability.
-- **Hosted API unavailable:** verify the course URL/model and network access; choose extractive demo explicitly if needed. Transient failures receive bounded retries under the limits above. Authentication and schema errors remain terminal.
+- **Chat unavailable:** administrators should check the course URL/model, prepared policy index, and network access in Settings. The employee composer accepts text and explains unavailability without sending a model request. Extractive mode is an explicit developer option only. Transient failures receive bounded retries under the limits above. Authentication and schema errors remain terminal.
 - **Changed metadata or documents:** UI/CLI auto-refresh; `uv run --locked cp01 ingest` forces an idempotent rebuild and removes stale chunks.
 - **Python 3.10 or `No matching distribution found` for Altair:** use `uv sync --locked` and check `uv run --locked python --version` reports 3.12. Altair 6.3.0 exists on [official PyPI](https://pypi.org/project/altair/6.3.0/) and requires Python >=3.11; pip filters releases incompatible with its interpreter. A restricted or stale package index can also hide releases. Use the project's uv setup instead of downgrading one transitive pin or changing system Python.
 - **Existing virtual environment:** deactivate an active environment before syncing. uv uses this project's `.venv` and can recreate it with the pinned Python when necessary. Do not use `--active` to target an unrelated environment.

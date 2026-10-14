@@ -38,11 +38,18 @@ class Claim:
     quote: str
 
 
+@dataclass(frozen=True)
+class AnswerDraft:
+    answer: str
+    claims: list[Claim]
+
+
 class AssistantState(TypedDict, total=False):
     question: str
     evidence: list[Evidence]
     claims: list[Claim]
     answer: str
+    draft_answer: str
     status: str
     error: str
     trace: list[dict]
