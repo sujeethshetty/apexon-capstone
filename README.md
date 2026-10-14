@@ -16,27 +16,27 @@ The recorded demonstration uses **extractive demo mode**. It does not show a liv
 
 ## Quick start
 
-Python 3.11–3.13 is supported; Python 3.12 was tested. Run commands from this repository's root.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first, then run commands from this repository's root. The project pins **Python 3.12** in `.python-version`; uv downloads it when needed and creates a local `.venv`. Your system Python can remain at 3.10, but Python 3.10 cannot run this project. The supported range remains Python 3.11–3.13.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-python -m pip install -r requirements.lock
-python -m pip install -e . --no-deps
+uv sync --locked
 cp .env.example .env                # Windows: copy .env.example .env
-python -m cp01.cli ingest
-streamlit run app.py
+uv run --locked cp01 ingest
+uv run --locked streamlit run app.py
 ```
 
 Before asking live questions, paste the course-provided model base URL into `HOSTED_LLM_BASE_URL` in your private `.env`. No local Ollama installation or chat-model download is required. Alternatively choose **Extractive demo** in the sidebar to explore immediately. Open the localhost address printed by Streamlit, normally http://localhost:8501. The first ingestion downloads Chroma's official ONNX MiniLM model (~80 MB) into `.chroma/embedding-model/`. Chroma's model downloader validates the model archive checksum. The local database and model cache are excluded from Git. Document embeddings persist in Chroma and the ONNX model is cached; each new search query is embedded locally at query time.
 
-For a dependency-resolved install instead of the tested snapshot:
+No environment activation or separate editable install is needed. `uv sync --locked` installs the project and the default development group (pytest and Ruff) from the committed `uv.lock`, and fails if the lock needs updating. Use `uv run --locked python --version` to check the project interpreter.
+
+`uv.lock` replaces the old Linux/Python 3.12 `requirements.lock` snapshot. It records resolved versions, hashes, and platform/Python markers from official PyPI. Do not install the old snapshot or edit lockfile versions by hand. For intentional dependency updates, edit `pyproject.toml` (or use `uv add`), regenerate the lock, and rerun the checks below:
 
 ```bash
-python -m pip install -e '.[dev]'
+uv lock
+uv sync --locked
 ```
 
-`requirements.lock` is the exact tested Python 3.12/Linux package snapshot, not a cross-platform lock with hashes. Package wheels must be available for your platform. No credentials are needed for extractive mode.
+To upgrade all dependencies within the declared ranges, use `uv lock --upgrade` before syncing and testing. Commit `pyproject.toml` and `uv.lock` together when the dependency declarations change. Package artifacts must still be available for your platform and network; a lockfile does not supply missing wheels. No credentials are needed for extractive mode.
 
 ## Two clearly different modes
 
@@ -60,7 +60,7 @@ HOSTED_LLM_MODEL=llama3.2
 Replace the example hostname with the course-provided URL. Choose **Hosted LLM API** in the UI, or run:
 
 ```bash
-python -m cp01.cli ask "How many annual leave days do full-time employees get?" --mode hosted
+uv run --locked cp01 ask "How many annual leave days do full-time employees get?" --mode hosted
 ```
 
 The application calls the model's `/api/chat` endpoint for three bounded role-specific requests. The question and selected excerpts are sent to your configured model server. If the course endpoint is plain HTTP, traffic is not encrypted: use the included synthetic data only. The course address is deliberately not committed, and no paid-provider key is needed. Local Chroma, Python dependencies, and the small ONNX embedding model still use local disk even though the chat model is hosted.
@@ -70,7 +70,7 @@ The application calls the model's `/api/chat` endpoint for three bounded role-sp
 For a completely API-free demonstration:
 
 ```bash
-python -m cp01.cli ask "How many annual leave days do full-time employees get?" --mode extractive
+uv run --locked cp01 ask "How many annual leave days do full-time employees get?" --mode extractive
 ```
 
 ### Optional paid API fallback (off by default)
@@ -129,14 +129,24 @@ Corpus fingerprints include content **and metadata**. CLI/UI refresh changed cor
 ## Testing and evaluation
 
 ```bash
-pytest -q
-ruff check src app.py tests
-python -m compileall -q src app.py
-python -m pip check
-python scripts/evaluate.py
+uv sync --locked
+uv run --locked pytest -q
+uv run --locked ruff check src app.py tests
+uv run --locked python -m compileall -q src app.py
+uv pip check
 ```
 
-GitHub Actions runs the offline suite on Python 3.12 with the tested dependency snapshot; the workflow does not download an embedding model or call a live hosted LLM. The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. The evaluation runner uses the **real** local ONNX embedding model against the 20 synthetic evaluation cases.
+GitHub Actions uses uv 0.11.14 and `uv sync --locked` on Linux with Python 3.11, 3.12, and 3.13, plus macOS and Windows with Python 3.12. Each job fetches the locked distributions without a restored dependency cache, so unavailable pins fail installation. The workflow does not download an embedding model or call a live hosted LLM. `uv pip check` checks installed dependency consistency without requiring pip in the environment.
+
+The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. The Streamlit smoke test opens the unindexed app with external network connections blocked and private `.env` loading disabled; loopback connections are allowed for Windows event-loop initialization.
+
+For the separate evaluation using the **real** local ONNX embedding model against the 20 synthetic cases, run:
+
+```bash
+uv run --locked python scripts/evaluate.py
+```
+
+This evaluation may download the embedding model on first use; it is not part of the offline suite.
 
 See [evaluation methodology and recorded results](docs/EVALUATION.md). Source recall and excerpt recall are diagnostic metrics, **not factual-accuracy or semantic-completeness scores**. The corpus includes multi-document, missing-fact, stale-version, and malicious-quotation cases. No claim of production-grade accuracy or comprehensive prompt-injection prevention is made.
 
@@ -175,8 +185,11 @@ No uploads are exposed in the UI. Add reviewed synthetic Markdown through the lo
 - **First embedding download fails:** allow the official model host used by Chroma, retry ingestion, and check proxy support. `httpx[socks]` is included for SOCKS proxies.
 - **No useful answer:** use a precise policy question; inspect retrieved excerpts and score thresholds. A cosine score is not a confidence probability.
 - **Hosted API unavailable:** verify the course URL/model and network access; choose extractive demo explicitly if needed. Transient failures receive bounded retries under the limits above. Authentication and schema errors remain terminal.
-- **Changed metadata or documents:** UI/CLI auto-refresh; `python -m cp01.cli ingest` forces an idempotent rebuild and removes stale chunks.
-- **Different Python/platform:** install from `pyproject.toml` with `pip install -e '.[dev]'` and rerun the suite; the snapshot was tested on Linux/Python 3.12.
+- **Changed metadata or documents:** UI/CLI auto-refresh; `uv run --locked cp01 ingest` forces an idempotent rebuild and removes stale chunks.
+- **Python 3.10 or `No matching distribution found` for Altair:** use `uv sync --locked` and check `uv run --locked python --version` reports 3.12. Altair 6.3.0 exists on [official PyPI](https://pypi.org/project/altair/6.3.0/) and requires Python >=3.11; pip filters releases incompatible with its interpreter. A restricted or stale package index can also hide releases. Use the project's uv setup instead of downgrading one transitive pin or changing system Python.
+- **Existing virtual environment:** deactivate an active environment before syncing. uv uses this project's `.venv` and can recreate it with the pinned Python when necessary. Do not use `--active` to target an unrelated environment.
+- **Restricted network or package mirror:** the committed lock resolves from official PyPI. Permit access to PyPI and its package files, plus uv's Python download host if Python 3.12 is not already installed. If your organization requires a mirror, arrange access to the locked artifacts through that mirror; changing the index alone does not make unavailable versions available.
+- **Stale lockfile after editing dependencies:** run `uv lock`, `uv sync --locked`, and the full offline checks; commit the updated lock with the dependency change.
 
 Optional fallback references: [OpenAI GPT-4.1 mini and supported endpoints](https://developers.openai.com/api/docs/models/gpt-4.1-mini), [Claude API authentication](https://platform.claude.com/docs/en/api/overview), [Claude structured tool outputs](https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools), [Claude model IDs](https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions).
 
