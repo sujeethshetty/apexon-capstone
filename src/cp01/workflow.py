@@ -1,11 +1,12 @@
 """Three bounded specialist roles orchestrated by an actual LangGraph StateGraph."""
 
 import time
+import re
 from dataclasses import replace
 
 from langgraph.graph import END, START, StateGraph
 
-from .models import AssistantState
+from .models import AnswerDraft, AssistantState
 from .providers import terms, absence_excerpt
 from .transport import ProviderFailure
 
@@ -88,9 +89,11 @@ def build_graph(store, provider):
     def answer(state: AssistantState):
         started = time.monotonic()
         try:
-            claims = provider.answer(state["question"], state["evidence"])
+            draft = provider.answer(state["question"], state["evidence"])
+            claims = draft.claims if isinstance(draft, AnswerDraft) else draft
             return {
                 "claims": claims,
+                "draft_answer": draft.answer if isinstance(draft, AnswerDraft) else "",
                 "status": "drafted" if claims else "unknown",
                 "trace": event(
                     state, "Answer agent", f"Selected {len(claims)} candidate excerpts", started
@@ -99,6 +102,7 @@ def build_graph(store, provider):
         except Exception as exc:
             return {
                 "claims": [],
+                "draft_answer": "",
                 "status": "error",
                 "error": str(exc)
                 if isinstance(exc, ProviderFailure)
@@ -125,12 +129,32 @@ def build_graph(store, provider):
                 valid.append(claim)
         # Fail the whole draft instead of silently dropping unsupported claims.
         accepted = bool(valid) and len(valid) == len(state.get("claims", []))
+        generated = state.get("draft_answer", "")
+        if generated:
+            citations = re.findall(r"\[([^\]]*)\]", generated)
+            supported = {claim.citation_id for claim in valid}
+            numbers = {
+                token.replace(",", "")
+                for token in re.findall(r"\b\d+(?:[.,]\d+)*\b", re.sub(r"\[S\d+\]", "", generated))
+            }
+            source_numbers = {
+                token.replace(",", "")
+                for token in re.findall(r"\b\d+(?:[.,]\d+)*\b", " ".join(c.quote for c in valid))
+            }
+            accepted = (
+                accepted
+                and bool(citations)
+                and set(citations) <= supported
+                and numbers <= source_numbers
+                and hasattr(provider, "review")
+            )
         if accepted and hasattr(provider, "review"):
             try:
-                accepted = provider.review(state["question"], valid)
+                accepted = provider.review(state["question"], valid, generated, state["evidence"])
             except Exception as exc:
                 return {
                     "claims": [],
+                    "draft_answer": "",
                     "status": "error",
                     "error": str(exc)
                     if isinstance(exc, ProviderFailure)
@@ -142,9 +166,12 @@ def build_graph(store, provider):
         return {
             **provider_metadata(),
             "claims": valid if accepted else [],
+            "draft_answer": "",
             "status": "limited" if unavailable else "answered" if accepted else "unverified",
-            "verification": "Exact excerpt, current version, valid citation, lexical relevance checked. This is not a semantic completeness guarantee.",
-            "answer": "\n\n".join(f"{c.text} [{c.citation_id}]" for c in valid) if accepted else "",
+            "verification": "Exact supporting quotes, current sources, citations and numeric support checked. Generated answers also require independent model review; this is not a factual-accuracy guarantee.",
+            "answer": (generated or "\n\n".join(f"{c.text} [{c.citation_id}]" for c in valid))
+            if accepted
+            else "",
             "trace": event(
                 state,
                 "Verification agent",
@@ -167,6 +194,7 @@ def build_graph(store, provider):
         return {
             **provider_metadata(),
             "answer": answer,
+            "draft_answer": "",
             "claims": [],
             "trace": event(state, "Safe response", f"Stopped with status: {status}", started),
         }
