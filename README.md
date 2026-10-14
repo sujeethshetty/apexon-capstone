@@ -138,7 +138,7 @@ uv pip check
 
 GitHub Actions uses uv 0.11.14 and `uv sync --locked` on Linux with Python 3.11, 3.12, and 3.13, plus macOS and Windows with Python 3.12. Each job fetches the locked distributions without a restored dependency cache, so unavailable pins fail installation. The workflow does not download an embedding model or call a live hosted LLM. `uv pip check` checks installed dependency consistency without requiring pip in the environment.
 
-The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. The Streamlit smoke test opens the unindexed app with network connections blocked and private `.env` loading disabled.
+The unit tests include invalid citations, altered excerpts, archived evidence, unavailable providers, state isolation, schema validation, and corpus consistency. Chroma regression tests use a lightweight deterministic test embedding to check persistence/filtering without downloading a model. The Streamlit smoke test opens the unindexed app with external network connections blocked and private `.env` loading disabled; loopback connections are allowed for Windows event-loop initialization.
 
 For the separate evaluation using the **real** local ONNX embedding model against the 20 synthetic cases, run:
 
